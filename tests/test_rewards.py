@@ -9,6 +9,7 @@ from open_r1.rewards import (
     len_reward,
     reasoning_steps_reward,
     tag_count_reward,
+    code_reward_sandbox,
 )
 
 
@@ -430,6 +431,30 @@ class TestCodeFormat(unittest.TestCase):
         ]
         reward_fn = get_code_format_reward(language="python")
         rewards = reward_fn(completion)
+        self.assertEqual(rewards[0], 1.0)
+
+    def test_code_sandbox(self):
+        """Test code reward with multiple code blocks in think and answer sections."""
+        completions = [
+            [
+                {
+                    "content": "```python\nt=int(input())\nwhile(t):\n    n=int(input())\n    l=[]\n    for i in range(n):\n        l.append(list(map(int,input().split())))\n    m=[]\n    for i in l:\n        m.append((i[1]//(i[0]+1))*i[2])\n    res=max(m)\n    print(res)\n    t=t-1\n```"
+                }
+            ]
+        ]
+        verification_info = [
+            {
+                "language": "python",
+                "test_cases": [
+                    {
+                        "input": "2\n3\n4 6 8\n2 6 6\n1 4 3\n1\n7 7 4\n",
+                        "output": "12\n0\n",
+                        "type": "stdin_stdout"
+                    }
+                ]
+            }
+        ]
+        rewards = code_reward_sandbox(completions, verification_info=verification_info)
         self.assertEqual(rewards[0], 1.0)
 
 

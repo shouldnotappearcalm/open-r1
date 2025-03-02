@@ -362,7 +362,7 @@ def code_reward(completions, **kwargs) -> list[float]:
         code_snippet = {code}
         test_cases = json.loads({test_cases})
 
-        evaluate_code(code_snippet, test_cases)
+        rate = evaluate_code(code_snippet, test_cases)
         """
         code_snippets = [extract_code(completion[-1]["content"]) for completion in completions]
         verification_info = kwargs["verification_info"]
@@ -385,6 +385,75 @@ def code_reward(completions, **kwargs) -> list[float]:
         rewards = [0.0] * len(completions)
     return rewards
 
+def code_reward_sandbox(completions, **kwargs) -> list[float]:
+    """Reward function that evaluates code snippets using the E2B code interpreter.
+
+    Assumes the dataset contains a `verification_info` column with test cases.
+    """
+    from code_runner_sdk import CodeRunnerClient, ProgrammingLanguage
+    # 创建客户端实例，可以自己修改 ip
+    client = CodeRunnerClient(
+        host="localhost",
+        port=8000
+    )
+
+    rewards = []
+    try:
+        """Returns a reward function that evaluates code snippets in a sandbox."""
+        evaluation_script_template = """
+import subprocess
+import json
+
+def evaluate_code(code, test_cases):
+    passed = 0
+    total = len(test_cases)
+    exec_timeout = 5
+
+    for case in test_cases:
+        process = subprocess.run(
+            ["python3", "-c", code],
+            input=case["input"],
+            text=True,
+            capture_output=True,
+            timeout=exec_timeout
+        )
+
+        if process.returncode != 0:  # Error in execution
+            continue
+
+        output = process.stdout.strip()
+        if output.strip() == case["output"].strip():
+            passed += 1
+
+    success_rate = (passed / total)
+    return success_rate
+
+code_snippet = {code}
+test_cases = json.loads({test_cases})
+
+rate = evaluate_code(code_snippet, test_cases)
+print(rate)
+        """
+        code_snippets = [extract_code(completion[-1]["content"]) for completion in completions]
+        verification_info = kwargs["verification_info"]
+        scripts = [
+            evaluation_script_template.format(
+                code=json.dumps(code), test_cases=json.dumps(json.dumps(info["test_cases"]))
+            )
+            for code, info in zip(code_snippets, verification_info)
+        ]
+        for script in scripts:
+            execution = client.run_code(script, language=ProgrammingLanguage(verification_info[-1]["language"]))
+            try:
+                output = float(execution['output'])
+            except (TypeError, ValueError):
+                output = 0.0
+            rewards.append(output)
+    except Exception as e:
+        print(f"Error from Local executor: {e}")
+        rewards = [0.0] * len(completions)
+    return rewards
+
 
 def get_code_format_reward(language: str = "python"):
     """Format reward function specifically for code responses.
@@ -400,3 +469,5 @@ def get_code_format_reward(language: str = "python"):
         return [1.0 if match else 0.0 for match in matches]
 
     return code_format_reward
+
+
