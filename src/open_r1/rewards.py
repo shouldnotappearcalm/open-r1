@@ -316,7 +316,7 @@ def extract_code(completion: str) -> str:
     return extracted_answer
 
 
-def code_reward(completions, **kwargs) -> list[float]:
+def code_reward1(completions, **kwargs) -> list[float]:
     """Reward function that evaluates code snippets using the E2B code interpreter.
 
     Assumes the dataset contains a `verification_info` column with test cases.
@@ -385,7 +385,7 @@ def code_reward(completions, **kwargs) -> list[float]:
         rewards = [0.0] * len(completions)
     return rewards
 
-def code_reward_sandbox(completions, **kwargs) -> list[float]:
+def code_reward(completions, **kwargs) -> list[float]:
     """Reward function that evaluates code snippets using the E2B code interpreter.
 
     Assumes the dataset contains a `verification_info` column with test cases.
