@@ -9,7 +9,7 @@ from open_r1.rewards import (
     len_reward,
     reasoning_steps_reward,
     tag_count_reward,
-    code_reward_sandbox,
+    code_reward,
 )
 
 
@@ -454,7 +454,7 @@ class TestCodeFormat(unittest.TestCase):
                 ]
             }
         ]
-        rewards = code_reward_sandbox(completions, verification_info=verification_info)
+        rewards = code_reward(completions, verification_info=verification_info)
         self.assertEqual(rewards[0], 1.0)
 
 
